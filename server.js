@@ -13,6 +13,8 @@ app.use(express.json());
 app.use(cors());
 app.use(helmet());
 app.use(morgan('dev'));
+app.use(cors({ origin: '*' })); // 🔥 Isso permite que qualquer domínio acesse a API
+app.use(express.json());
 
 // Rotas principais
 app.use('/api/eplugin', epluginRoutes);
