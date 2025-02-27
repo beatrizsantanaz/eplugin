@@ -8,7 +8,7 @@ const {
 // Controlador para listar as empresas
 const handleObterTodasEmpresas = async (req, res) => {
     try {
-        const empresas = await obterEmpresas();
+        const empresas = await obterTodasEmpresas();
         res.json(empresas);
     } catch (error) {
         res.status(500).json({ error: error.message });
