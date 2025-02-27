@@ -3,9 +3,8 @@ const {
     handleObterEmpresas,
     handleObterFuncionariosPorEmpresa,
     handleSimulacaoFerias,
-    handleSimulacaoRescisao
+    handleSimulacaoRescisao // 🔥 Importando a função correta do controller
 } = require('../controllers/epluginController');
-const { simularRescisao } = require('../services/epluginService'); // 🔥 Importando corretamente
 
 const router = express.Router();
 
@@ -17,6 +16,6 @@ router.get('/funcionarios', handleObterFuncionariosPorEmpresa);
 
 // Rotas para simulação de férias e rescisão
 router.post('/simulacao/ferias', handleSimulacaoFerias);
-router.post('/simulacao/rescisao', handleSimulacaoRescisao); // 🔥 Ajustando para chamar a função do controller
+router.post('/simulacao/rescisao', handleSimulacaoRescisao); // 🔥 Agora está chamando o controller corretamente
 
 module.exports = router;
