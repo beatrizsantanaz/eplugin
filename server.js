@@ -1,21 +1,29 @@
 const express = require('express');
-const {
-    handleObterEmpresas,
-    handleObterFuncionariosPorEmpresa,
-    handleSimulacaoFerias,
-    handleSimulacaoRescisao // 🔥 Importando a função correta do controller
-} = require('../controllers/epluginController');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const path = require("path"); // ✅ Importando o módulo path corretamente
 
-const router = express.Router();
+const epluginRoutes = require('./routes/epluginRoutes'); // ✅ Importação correta das rotas
 
-// Rota para listar todas as empresas cadastradas
-router.get('/empresas', handleObterEmpresas);
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-// Rota para listar funcionários de uma empresa específica
-router.get('/funcionarios', handleObterFuncionariosPorEmpresa);
+// Middlewares
+app.use(express.json());
+app.use(cors());
+app.use(helmet());
+app.use(morgan('dev'));
 
-// Rotas para simulação de férias e rescisão
-router.post('/simulacao/ferias', handleSimulacaoFerias);
-router.post('/simulacao/rescisao', handleSimulacaoRescisao); // 🔥 Agora está chamando o controller corretamente
+// Rotas principais
+app.use('/api/eplugin', epluginRoutes);
 
-module.exports = router;
+// Tratamento de erro para rotas não encontradas
+app.use((req, res) => {
+    res.status(404).json({ error: "Rota não encontrada." });
+});
+
+// Iniciando o servidor
+app.listen(PORT, () => {
+    console.log(`🚀 Servidor rodando na porta ${PORT}`);
+});

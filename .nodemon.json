@@ -1,0 +1,5 @@
+{
+    "watch": ["server.js", "controllers", "routes"],
+    "ignore": ["node_modules", "package-lock.json"]
+  }
+  

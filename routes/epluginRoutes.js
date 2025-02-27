@@ -3,8 +3,10 @@ const {
     handleObterEmpresas,
     handleObterFuncionariosPorEmpresa,
     handleSimulacaoFerias,
-    handleSimulacaoRescisao // 🔥 Importando a função correta do controller
-} = require(`${__dirname}/../controllers/epluginController`);
+    handleSimulacaoRescisao
+} = require('../controllers/epluginController'); // ✅ Caminho correto
+
+
 
 const router = express.Router();
 
