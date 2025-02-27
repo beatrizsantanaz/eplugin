@@ -1,10 +1,5 @@
 const express = require('express');
-const {
-    handleObterEmpresas,
-    handleObterFuncionariosPorEmpresa,
-    handleSimulacaoFerias,
-    handleSimulacaoRescisao
-} = require('../controllers/epluginController');
+const { handleSimulacaoRescisao } = require('../controllers/epluginController');
 
 const router = express.Router();
 
