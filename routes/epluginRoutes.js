@@ -4,7 +4,7 @@ const {
     handleObterFuncionariosPorEmpresa,
     handleSimulacaoFerias,
     handleSimulacaoRescisao // 🔥 Importando a função correta do controller
-} = require('../controllers/epluginController');
+} = require(`${__dirname}/../controllers/epluginController`);
 
 const router = express.Router();
 
