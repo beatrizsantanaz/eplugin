@@ -286,6 +286,10 @@ const calcularDecimoTerceiro = (salarioBase, dataSaida) => {
 };
 
 module.exports = {
+    obterTodasEmpresas, // ✅ Agora está exportando corretamente!
+    obterEmpresaPorCNPJ,
+    obterFuncionarioPorNomeOuCPF,
+    obterDetalhesFuncionario,
     simularFerias,
-    simularRescisao // 🔥 Certifique-se de exportar essa função!
+    simularRescisao
 };

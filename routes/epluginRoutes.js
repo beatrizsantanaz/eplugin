@@ -1,6 +1,6 @@
 const express = require('express');
 const {
-    handleObterEmpresas,
+    handleObterTodasEmpresas,
     handleObterFuncionariosPorEmpresa,
     handleSimulacaoFerias,
     handleSimulacaoRescisao
@@ -11,7 +11,7 @@ const {
 const router = express.Router();
 
 // Rota para listar todas as empresas cadastradas
-router.get('/empresas', handleObterEmpresas);
+router.get('/empresas', handleObterTodasEmpresas);
 
 // Rota para listar funcionários de uma empresa específica
 router.get('/funcionarios', handleObterFuncionariosPorEmpresa);

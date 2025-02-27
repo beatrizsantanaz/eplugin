@@ -1,12 +1,12 @@
 const {
-    obterEmpresas,
+    obterTodasEmpresas,
     obterFuncionariosPorEmpresa,
     simularFerias,
     simularRescisao
 } = require('../services/epluginService');
 
 // Controlador para listar as empresas
-const handleObterEmpresas = async (req, res) => {
+const handleObterTodasEmpresas = async (req, res) => {
     try {
         const empresas = await obterEmpresas();
         res.json(empresas);
@@ -60,7 +60,7 @@ const handleSimulacaoRescisao = async (req, res) => {
 };
 
 module.exports = {
-    handleObterEmpresas,
+    handleObterTodasEmpresas,
     handleObterFuncionariosPorEmpresa,
     handleSimulacaoFerias,
     handleSimulacaoRescisao };
