@@ -1,20 +1,16 @@
-require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
-const morgan = require('morgan');
-const epluginRoutes = require('./routes/epluginRoutes');
+const {
+    handleObterEmpresas,
+    handleObterFuncionariosPorEmpresa,
+    handleSimulacaoFerias,
+    handleSimulacaoRescisao
+} = require('../controllers/epluginController');
 
-const app = express();
+const router = express.Router();
 
-// Middlewares
-app.use(express.json());
-app.use(cors());
-app.use(morgan('dev'));
+router.get('/empresas', handleObterEmpresas);
+router.get('/funcionarios', handleObterFuncionariosPorEmpresa);
+router.post('/simulacao/ferias', handleSimulacaoFerias);
+router.post('/simulacao/rescisao', handleSimulacaoRescisao);
 
-// Rotas do ePlugin
-app.use('/api/eplugin', epluginRoutes);
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`🚀 Servidor rodando na porta ${PORT}`);
-});
+module.exports = router;
