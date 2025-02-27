@@ -8,7 +8,7 @@
   ],
   "routes": [
     {
-      "src": "/api/eplugin/(.*)",
+      "src": "/(.*)",
       "dest": "server.js"
     }
   ]
