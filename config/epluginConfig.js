@@ -1,6 +1,19 @@
 require('dotenv').config();
 
-module.exports = {
-    BASE_URL: 'https://dp.pack.alterdata.com.br/api/v1', // URL base correta
-    TOKEN: process.env.EPLUGIN_TOKEN
+const config = {
+  tokens: {
+    empresa1: process.env.EPLUGIN_TOKEN_EMPRESA_1,
+    empresa2: process.env.EPLUGIN_TOKEN_EMPRESA_2
+  }
 };
+
+const getTokenForEmpresa = (empresaId) => {
+  if (empresaId === 'empresa1') {
+    return config.tokens.empresa1;
+  } else if (empresaId === 'empresa2') {
+    return config.tokens.empresa2;
+  }
+  return null;
+};
+
+module.exports = { config, getTokenForEmpresa };
