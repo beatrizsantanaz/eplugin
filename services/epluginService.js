@@ -2,6 +2,7 @@ const axios = require('axios');
 const { getTokenForEmpresa } = require('../config/epluginConfig');
 
 const BASE_URL = 'https://dp.pack.alterdata.com.br/api/v1'; // Defina a URL base da API
+const DOCUMENTOS_API_URL = 'https://documentos.pack.alterdata.com.br/api/v1/integracao/documentos';
 
 // Criar instância do Axios dinamicamente
 const createApiInstance = (empresaId) => {
@@ -190,10 +191,274 @@ const calcularFerias = (salarioBase, diasFerias, nomeFuncionario, venderDias = f
     };
 };
 
+// 🟢 Buscar TODAS as empresas (de ambas as contas)
+const fetchEmpresas = async () => {
+    try {
+        console.log('🔍 Buscando lista de empresas em todas as contas...');
+        let todasEmpresas = [];
+
+        // Verifica ambas as contas (empresa1 e empresa2)
+        const empresaIds = ['empresa1', 'empresa2'];
+
+        for (const empresaId of empresaIds) {
+            console.log(`📡 Buscando empresas para ${empresaId}...`);
+            const api = createApiInstance(empresaId);
+            let empresas = [];
+            let offset = 0;
+            const limit = 100;
+            let continuarBuscando = true;
+
+            while (continuarBuscando) {
+                const response = await api.get(`/empresas?page[limit]=${limit}&page[offset]=${offset}`);
+                const empresasPagina = response.data.data || [];
+
+                if (empresasPagina.length === 0) {
+                    continuarBuscando = false;
+                } else {
+                    empresas = empresas.concat(empresasPagina.map(empresa => ({
+                        cnpj: empresa.attributes.cpfcnpj.toString(),
+                        nome: empresa.attributes.nome || "Nome desconhecido",
+                        telefone: empresa.attributes.telefone || "Não informado",
+                        externoId: empresa.attributes.externoid,
+                        empresaId // 🔹 Mantemos o ID da conta para referência
+                    })));
+                    offset += limit;
+                }
+            }
+
+            console.log(`📄 Total de empresas carregadas para ${empresaId}: ${empresas.length}`);
+            todasEmpresas = todasEmpresas.concat(empresas);
+        }
+
+        console.log(`🏢 Total de empresas encontradas: ${todasEmpresas.length}`);
+        return todasEmpresas;
+    } catch (error) {
+        console.error('❌ Erro ao buscar empresas:', error.response ? error.response.data : error.message);
+        return [];
+    }
+};
+
+// 🟢 Buscar empresa por nome ou CNPJ em qualquer uma das contas
+const buscarEmpresaPorNomeOuCNPJ = async (termo) => {
+    try {
+        console.log(`🔍 Buscando empresa pelo termo:`, termo);
+
+        // 🔹 Se termo for um array, pegar o primeiro valor
+        if (Array.isArray(termo)) {
+            console.warn("⚠️ Recebido um array. Pegando o primeiro item...");
+            termo = termo.length > 0 ? termo[0] : '';
+        }
+
+        // 🔹 Se for um objeto, converter para string
+        if (typeof termo === 'object' && termo !== null) {
+            console.warn("⚠️ Recebido um objeto. Convertendo para string...");
+            termo = JSON.stringify(termo);
+        }
+
+        // 🔹 Se ainda assim não for string ou for vazia, retornar erro
+        if (typeof termo !== 'string' || termo.trim() === '') {
+            console.error("❌ Erro: O termo precisa ser uma string válida.");
+            return null;
+        }
+
+        const empresas = await fetchEmpresas();
+        const termoFormatado = termo.replace(/\D/g, '').toLowerCase();
+
+        const empresaEncontrada = empresas.find(emp =>
+            emp.cnpj.replace(/\D/g, '') === termoFormatado ||
+            emp.nome.toLowerCase().includes(termo.toLowerCase())
+        );
+
+        if (!empresaEncontrada) {
+            console.warn(`⚠️ Empresa "${termo}" não encontrada.`);
+            return null;
+        }
+
+        console.log(`✅ Empresa encontrada: ${empresaEncontrada.nome} (CNPJ: ${empresaEncontrada.cnpj}) na conta ${empresaEncontrada.empresaId}`);
+        return empresaEncontrada;
+    } catch (error) {
+        console.error(`❌ Erro ao buscar empresa:`, error.message);
+        return null;
+    }
+};
+
+
+// 🟢 Buscar documentos de uma empresa específica com autenticação correta
+const buscarDocumentosDaEmpresa = async (cnpj, empresaId) => {
+    try {
+        console.log(`🔍 Buscando documentos para empresa CNPJ: ${cnpj} na conta ${empresaId}`);
+        
+        // ✅ Criar a instância de requisição já com o token correto
+        const api = createApiInstance(empresaId);
+
+        let documentos = [];
+        let offset = 0;
+        const limit = 25;
+        let hasMorePages = true;
+
+        while (hasMorePages) {
+            let url = `${DOCUMENTOS_API_URL}?filter[empresaId]=${encodeURIComponent(cnpj)}&sort=-criacao&page[limit]=${limit}&page[offset]=${offset}`;
+
+            console.log(`🔗 Requisição para: ${url}`);
+
+            // ✅ Agora a requisição será feita corretamente
+            const response = await api.get(url);
+
+            if (!response.data || !response.data.data) {
+                console.warn(`⚠️ Resposta inesperada da API para empresa ${cnpj}:`, response.data);
+                return [];
+            }
+
+            if (response.data.data.length > 0) {
+                documentos = documentos.concat(response.data.data);
+                offset += limit;
+            } else {
+                hasMorePages = false;
+            }
+
+            hasMorePages = response.data.links?.next ? true : false;
+        }
+
+        console.log(`📄 Total de documentos encontrados para empresa ${cnpj}: ${documentos.length}`);
+        return documentos;
+    } catch (error) {
+        console.error(`❌ Erro ao buscar documentos para empresa ${cnpj}:`, error.response ? error.response.data : error.message);
+        return [];
+    }
+};
+
+// 🟢 Encontrar o documento correto baseado no tipo e mês
+const buscarDetalhesDocumento = async (documentos, tipoDesejado, mesDesejado, empresaId) => {
+    if (!documentos.length) return null;
+
+    const mesFormatado = mesDesejado ? mesDesejado.toLowerCase() : '';
+    const tipoFormatado = tipoDesejado ? tipoDesejado.toLowerCase() : '';
+    const anoAtual = new Date().getFullYear();
+
+    console.log(`🔍 Buscando documento EXATO do tipo "${tipoDesejado}" para o mês "${mesDesejado}"...`);
+
+    const documentoEncontrado = documentos.find(doc => {
+        const nomeDocumento = doc.attributes.titulo?.toLowerCase() || '';
+        const descricaoDocumento = doc.attributes.descricao?.toLowerCase() || '';
+        const dataCriacao = new Date(doc.attributes.criacao);
+        const mesCriacao = dataCriacao.toLocaleString('pt-BR', { month: 'long' }).toLowerCase();
+        const anoCriacao = dataCriacao.getFullYear();
+
+        console.log(`📄 Verificando documento: "${nomeDocumento}" - Criado em ${mesCriacao}/${anoCriacao}`);
+
+        // 🔹 Extraindo o mês e ano do título ou descrição
+        const regexData = /(\d{2})\/(\d{4})/;
+        const matchTitulo = nomeDocumento.match(regexData);
+        const matchDescricao = descricaoDocumento.match(regexData);
+
+        let mesDocumento = mesCriacao;
+        let anoDocumento = anoCriacao;
+
+        if (matchTitulo) {
+            mesDocumento = getNomeMesPorNumero(matchTitulo[1]);
+            anoDocumento = parseInt(matchTitulo[2], 10);
+        } else if (matchDescricao) {
+            mesDocumento = getNomeMesPorNumero(matchDescricao[1]);
+            anoDocumento = parseInt(matchDescricao[2], 10);
+        }
+
+        console.log(`📄 Mês extraído: ${mesDocumento}/${anoDocumento}`);
+
+        return (
+            nomeDocumento.includes(tipoFormatado) &&
+            mesDocumento === mesFormatado &&
+            anoDocumento === anoAtual
+        );
+    });
+
+    if (!documentoEncontrado) {
+        console.warn(`⚠️ Nenhum documento EXATO correspondente encontrado.`);
+        return null;
+    }
+
+    console.log(`✅ Documento EXATO encontrado: ${documentoEncontrado.attributes.titulo} - Criado em ${documentoEncontrado.attributes.criacao}`);
+
+    // 🟢 Pegar o link relacionado ao documento para obter detalhes completos
+    const relatedLink = documentoEncontrado.relationships?.arquivos?.links?.related;
+    
+    if (!relatedLink) {
+        console.warn(`⚠️ Nenhum link relacionado encontrado para o documento.`);
+        return documentoEncontrado;
+    }
+
+    console.log(`🔗 Buscando detalhes adicionais no link: ${relatedLink}`);
+
+    // Fazer requisição GET para pegar os detalhes completos do documento
+    try {
+        const api = createApiInstance(empresaId);
+        const response = await api.get(relatedLink);
+
+        if (response.data?.data) {
+            console.log(`✅ Detalhes do documento carregados com sucesso.`);
+            return { ...documentoEncontrado, detalhes: response.data.data };
+        } else {
+            console.warn(`⚠️ Resposta inesperada ao buscar detalhes do documento.`);
+            return documentoEncontrado;
+        }
+    } catch (error) {
+        console.error(`❌ Erro ao buscar detalhes do documento:`, error.response ? error.response.data : error.message);
+        return documentoEncontrado;
+    }
+};
+
+// 🛠 Função auxiliar para converter número do mês em nome
+const getNomeMesPorNumero = (numeroMes) => {
+    const meses = {
+        "01": "janeiro", "02": "fevereiro", "03": "março",
+        "04": "abril", "05": "maio", "06": "junho",
+        "07": "julho", "08": "agosto", "09": "setembro",
+        "10": "outubro", "11": "novembro", "12": "dezembro"
+    };
+    return meses[numeroMes] || "";
+};
+
+
+const buscarDocumentoEspecifico = async (termoEmpresa, tipoDocumento, mes) => {
+    try {
+        if (typeof termoEmpresa !== 'string' || termoEmpresa.trim() === '') {
+            console.error("❌ Erro: termoEmpresa precisa ser uma string válida.");
+            return { erro: "Termo inválido para busca de empresa." };
+        }
+
+        console.log(`📄 Solicitando documento: Empresa: ${termoEmpresa}, Tipo: ${tipoDocumento}, Mês: ${mes}`);
+
+        // 🔍 Buscar a empresa
+        const empresa = await buscarEmpresaPorNomeOuCNPJ(termoEmpresa.trim());
+        if (!empresa) return { erro: "Empresa não encontrada." };
+
+        // 🔍 Buscar documentos
+        const documentos = await buscarDocumentosDaEmpresa(empresa.cnpj, empresa.empresaId);
+        if (!documentos.length) return { erro: "Nenhum documento encontrado para a empresa." };
+
+        // 🔍 Filtrar o documento correto
+        const documento = await buscarDetalhesDocumento(documentos, tipoDocumento, mes, empresa.empresaId);
+        if (!documento) return { erro: "Nenhum documento correspondente encontrado." };
+
+        return {
+            empresa: empresa.nome,
+            documento: documento.attributes.nome,
+            dataCriacao: documento.attributes.criacao,
+            url: documento.attributes.url || null,
+            detalhes: documento.detalhes || null
+        };
+    } catch (error) {
+        console.error("❌ Erro ao buscar documento:", error.message);
+        return { erro: "Erro ao buscar documento." };
+    }
+};
+
 module.exports = {
     obterTodasEmpresas,
     obterEmpresaPorCNPJ,
     obterFuncionarioPorNomeOuCPF,
     obterDetalhesFuncionario,
-    simularFerias
+    simularFerias,
+    fetchEmpresas,
+    buscarEmpresaPorNomeOuCNPJ,
+    buscarDocumentoEspecifico
 };

@@ -6,6 +6,7 @@ const {
     handleSimulacaoFerias,
     handleSimulacaoRescisao
 } = require('../controllers/epluginController'); // ✅ Caminho correto
+const { handleBuscarDocumento } = require('../controllers/epluginController'); // Certifique-se do caminho correto
 
 const router = express.Router();
 
@@ -21,5 +22,8 @@ router.get('/funcionarios', handleObterFuncionariosPorEmpresa);
 // Rotas para simulação de férias e rescisão
 router.post('/simular-ferias', handleSimulacaoFerias);
 router.post('/simular-rescisao', handleSimulacaoRescisao); // 🔥 Corrigida para seguir o padrão
+
+// 🔹 Rota para buscar documentos com base na solicitação
+router.post('/buscar-documento', handleBuscarDocumento);
 
 module.exports = router;

@@ -6,6 +6,7 @@ const {
     simularFerias,
     simularRescisao
 } = require('../services/epluginService');
+const { buscarDocumentoEspecifico } = require('../services/epluginService');
 
 // Controlador para listar todas as empresas
 const handleObterTodasEmpresas = async (req, res) => {
@@ -91,8 +92,30 @@ const handleSimulacaoRescisao = async (req, res) => {
     }
 };
 
+// 🔹 Controller para buscar documento baseado na solicitação do cliente
+const handleBuscarDocumento = async (req, res) => {
+    try {
+        // 🔥 Extraindo corretamente os parâmetros do corpo da requisição
+        const { empresa, tipoDocumento, mes } = req.body;
+
+        if (!empresa || !tipoDocumento) {
+            return res.status(400).json({ erro: "Empresa e tipo de documento são obrigatórios." });
+        }
+
+        console.log(`📄 Solicitando documento: Empresa: ${empresa}, Tipo: ${tipoDocumento}, Mês: ${mes || "qualquer mês"}`);
+
+        // Chamando a função principal com os valores extraídos
+        const resultado = await buscarDocumentoEspecifico(empresa, tipoDocumento, mes);
+
+        return res.json(resultado);
+    } catch (error) {
+        console.error("❌ Erro no handler de busca de documento:", error.message);
+        return res.status(500).json({ erro: "Erro interno ao buscar documento." });
+    }
+};
 module.exports = {
     handleObterTodasEmpresas,
+    handleBuscarDocumento,
     handleObterEmpresaPorCNPJ,
     handleObterFuncionariosPorEmpresa,
     handleSimulacaoFerias,
