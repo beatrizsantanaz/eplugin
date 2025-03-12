@@ -10,7 +10,9 @@ const { buscarDocumentoEspecifico } = require('../services/epluginService');
 const axios = require('axios');
 require('dotenv').config();
 
-const WEBHOOK_URL = process.env.WEBHOOK_URL;
+const WEBHOOK_URL = "https://contabhub.app.n8n.cloud/webhook/32d4027e-cb57-49b1-85d5-76a472d001d0";
+
+
 
 // Controlador para listar todas as empresas
 const handleObterTodasEmpresas = async (req, res) => {
@@ -96,27 +98,33 @@ const handleSimulacaoRescisao = async (req, res) => {
     }
 };
 
-// 🔹 Controller para buscar documento baseado na solicitação do cliente
+// Controlador para buscar documento baseado na solicitação do cliente
 const handleBuscarDocumento = async (req, res) => {
     try {
         const { empresa, tipoDocumento, mes, telefone } = req.body;
 
-        if (!empresa || !tipoDocumento) {
-            return res.status(400).json({ erro: "Empresa e tipo de documento são obrigatórios." });
+        if (!empresa || !tipoDocumento || !telefone) {
+            return res.status(400).json({ erro: "Empresa, tipo de documento e telefone são obrigatórios." });
         }
 
         console.log(`📄 Solicitando documento: Empresa: ${empresa}, Tipo: ${tipoDocumento}, Mês: ${mes || "qualquer mês"}`);
 
         const resultado = await buscarDocumentoEspecifico(empresa, tipoDocumento, mes);
-        resultado.telefone = telefone; // Adiciona telefone no JSON de resposta
-        res.json(resultado);
+        const payloadWebhook = { ...resultado, telefone };
 
-        // 🔥 Enviar resultado para o Webhook em segundo plano
+        // 🚀 **Responde ao cliente IMEDIATAMENTE**
+        res.json(payloadWebhook);
+
+        // 🔥 **Envia o webhook em SEGUNDO PLANO para evitar bloqueios**
         if (WEBHOOK_URL) {
-            axios.post(WEBHOOK_URL, resultado)
+            console.log(`🚀 Enviando webhook para: ${WEBHOOK_URL}`);
+            console.log(`📡 Payload do webhook:`, JSON.stringify(payloadWebhook));
+
+            axios.post(WEBHOOK_URL, payloadWebhook)
                 .then(() => console.log("✅ Webhook enviado com sucesso."))
-                .catch(err => console.error("❌ Erro ao enviar webhook:", err.message));
+                .catch(err => console.error("❌ Erro ao enviar webhook:", err.response ? err.response.data : err.message));
         }
+
     } catch (error) {
         console.error("❌ Erro no handler de busca de documento:", error.message);
         return res.status(500).json({ erro: "Erro interno ao buscar documento." });
