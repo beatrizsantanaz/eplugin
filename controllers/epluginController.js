@@ -7,6 +7,10 @@ const {
     simularRescisao
 } = require('../services/epluginService');
 const { buscarDocumentoEspecifico } = require('../services/epluginService');
+const axios = require('axios');
+require('dotenv').config();
+
+const WEBHOOK_URL = process.env.WEBHOOK_URL;
 
 // Controlador para listar todas as empresas
 const handleObterTodasEmpresas = async (req, res) => {
@@ -95,7 +99,6 @@ const handleSimulacaoRescisao = async (req, res) => {
 // 🔹 Controller para buscar documento baseado na solicitação do cliente
 const handleBuscarDocumento = async (req, res) => {
     try {
-        // 🔥 Extraindo corretamente os parâmetros do corpo da requisição
         const { empresa, tipoDocumento, mes } = req.body;
 
         if (!empresa || !tipoDocumento) {
@@ -104,15 +107,21 @@ const handleBuscarDocumento = async (req, res) => {
 
         console.log(`📄 Solicitando documento: Empresa: ${empresa}, Tipo: ${tipoDocumento}, Mês: ${mes || "qualquer mês"}`);
 
-        // Chamando a função principal com os valores extraídos
         const resultado = await buscarDocumentoEspecifico(empresa, tipoDocumento, mes);
+        res.json(resultado);
 
-        return res.json(resultado);
+        // 🔥 Enviar resultado para o Webhook
+        if (WEBHOOK_URL) {
+            await axios.post(WEBHOOK_URL, resultado).catch(err => {
+                console.error("❌ Erro ao enviar webhook:", err.message);
+            });
+        }
     } catch (error) {
         console.error("❌ Erro no handler de busca de documento:", error.message);
         return res.status(500).json({ erro: "Erro interno ao buscar documento." });
     }
 };
+
 module.exports = {
     handleObterTodasEmpresas,
     handleBuscarDocumento,
