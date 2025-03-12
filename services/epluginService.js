@@ -234,6 +234,7 @@ const simularRescisao = async (cnpj, nomeOuCPF, dataDemissao, tipoRescisao) => {
         return {
             funcionario: nome,
             tipoRescisao,
+            dataAdmissao,
             salarioBase,
             saldoSalario: saldoSalario.toFixed(2),
             avisoPrevio: avisoPrevio.toFixed(2),
