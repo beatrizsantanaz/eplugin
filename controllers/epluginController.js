@@ -99,7 +99,7 @@ const handleSimulacaoRescisao = async (req, res) => {
 // 🔹 Controller para buscar documento baseado na solicitação do cliente
 const handleBuscarDocumento = async (req, res) => {
     try {
-        const { empresa, tipoDocumento, mes } = req.body;
+        const { empresa, tipoDocumento, mes, telefone } = req.body;
 
         if (!empresa || !tipoDocumento) {
             return res.status(400).json({ erro: "Empresa e tipo de documento são obrigatórios." });
@@ -108,20 +108,21 @@ const handleBuscarDocumento = async (req, res) => {
         console.log(`📄 Solicitando documento: Empresa: ${empresa}, Tipo: ${tipoDocumento}, Mês: ${mes || "qualquer mês"}`);
 
         const resultado = await buscarDocumentoEspecifico(empresa, tipoDocumento, mes);
-resultado.telefone = req.body.telefone; // Adiciona telefone no JSON de resposta
-res.json(resultado);
+        resultado.telefone = telefone; // Adiciona telefone no JSON de resposta
+        res.json(resultado);
 
-        // 🔥 Enviar resultado para o Webhook
+        // 🔥 Enviar resultado para o Webhook em segundo plano
         if (WEBHOOK_URL) {
-            await axios.post(WEBHOOK_URL, resultado).catch(err => {
-                console.error("❌ Erro ao enviar webhook:", err.message);
-            });
+            axios.post(WEBHOOK_URL, resultado)
+                .then(() => console.log("✅ Webhook enviado com sucesso."))
+                .catch(err => console.error("❌ Erro ao enviar webhook:", err.message));
         }
     } catch (error) {
         console.error("❌ Erro no handler de busca de documento:", error.message);
         return res.status(500).json({ erro: "Erro interno ao buscar documento." });
     }
 };
+
 
 module.exports = {
     handleObterTodasEmpresas,
