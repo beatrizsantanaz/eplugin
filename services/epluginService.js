@@ -195,8 +195,8 @@ const simularRescisao = async (cnpj, nomeOuCPF, dataDemissao, tipoRescisao) => {
     try {
         console.log(`🚀 Iniciando simulação de rescisão para ${nomeOuCPF}...`);
 
-        const empresaId = await obterEmpresaPorCNPJ(cnpj);
-        const funcionarioId = await obterFuncionarioPorNomeOuCPF(empresaId, nomeOuCPF);
+        const { empresaId, empresa } = await obterEmpresaPorCNPJ(cnpj);
+        const funcionarioId = await obterFuncionarioPorNomeOuCPF(empresaId, empresa.id, nomeOuCPF);
         const detalhesFuncionario = await obterDetalhesFuncionario(empresaId, funcionarioId);
         const { salarioBase, admissao, nome } = detalhesFuncionario;
 
