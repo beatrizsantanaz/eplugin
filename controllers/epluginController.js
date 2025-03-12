@@ -109,27 +109,21 @@ const handleBuscarDocumento = async (req, res) => {
 
         console.log(`📄 Solicitando documento: Empresa: ${empresa}, Tipo: ${tipoDocumento}, Mês: ${mes || "qualquer mês"}`);
 
-        // 🔹 Responde IMEDIATAMENTE ao cliente
-        res.json({ status: "Processando documento, o webhook será enviado em breve." });
+        const resultado = await buscarDocumentoEspecifico(empresa, tipoDocumento, mes);
+        const payloadWebhook = { ...resultado, telefone };
 
-        // 🔥 Executa a busca do documento e o envio do webhook em segundo plano
-        setImmediate(async () => {
-            try {
-                console.log("🔍 Iniciando busca de documento em segundo plano...");
-                const resultado = await buscarDocumentoEspecifico(empresa, tipoDocumento, mes);
-                const payloadWebhook = { ...resultado, telefone };
+        // 🚀 **Responde ao cliente IMEDIATAMENTE**
+        res.json(payloadWebhook);
 
-                if (WEBHOOK_URL) {
-                    console.log(`🚀 Enviando webhook para: ${WEBHOOK_URL}`);
-                    console.log(`📡 Payload do webhook:`, JSON.stringify(payloadWebhook));
+        // 🔥 **Envia o webhook em SEGUNDO PLANO para evitar bloqueios**
+        if (WEBHOOK_URL) {
+            console.log(`🚀 Enviando webhook para: ${WEBHOOK_URL}`);
+            console.log(`📡 Payload do webhook:`, JSON.stringify(payloadWebhook));
 
-                    await axios.post(WEBHOOK_URL, payloadWebhook);
-                    console.log("✅ Webhook enviado com sucesso.");
-                }
-            } catch (error) {
-                console.error("❌ Erro ao buscar documento ou enviar webhook:", error.message);
-            }
-        });
+            axios.post(WEBHOOK_URL, payloadWebhook)
+                .then(() => console.log("✅ Webhook enviado com sucesso."))
+                .catch(err => console.error("❌ Erro ao enviar webhook:", err.response ? err.response.data : err.message));
+        }
 
     } catch (error) {
         console.error("❌ Erro no handler de busca de documento:", error.message);
