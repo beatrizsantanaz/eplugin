@@ -109,12 +109,13 @@ const handleBuscarDocumento = async (req, res) => {
 
         console.log(`📄 Solicitando documento: Empresa: ${empresa}, Tipo: ${tipoDocumento}, Mês: ${mes || "qualquer mês"}`);
 
-        // 🔹 Retorna uma resposta rápida ao cliente
+        // 🔹 Responde IMEDIATAMENTE ao cliente
         res.json({ status: "Processando documento, o webhook será enviado em breve." });
 
-        // 🔥 Processa o documento e envia o webhook de forma assíncrona
-        setTimeout(async () => {
+        // 🔥 Executa a busca do documento e o envio do webhook em segundo plano
+        setImmediate(async () => {
             try {
+                console.log("🔍 Iniciando busca de documento em segundo plano...");
                 const resultado = await buscarDocumentoEspecifico(empresa, tipoDocumento, mes);
                 const payloadWebhook = { ...resultado, telefone };
 
@@ -128,7 +129,7 @@ const handleBuscarDocumento = async (req, res) => {
             } catch (error) {
                 console.error("❌ Erro ao buscar documento ou enviar webhook:", error.message);
             }
-        }, 1000); // Pequeno delay para não travar a API principal
+        });
 
     } catch (error) {
         console.error("❌ Erro no handler de busca de documento:", error.message);
