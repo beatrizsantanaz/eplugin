@@ -191,6 +191,94 @@ const calcularFerias = (salarioBase, diasFerias, nomeFuncionario, venderDias = f
     };
 };
 
+const simularRescisao = async (cnpj, nomeOuCPF, dataDemissao, tipoRescisao) => {
+    try {
+        console.log(`🚀 Iniciando simulação de rescisão para ${nomeOuCPF}...`);
+
+        const empresaId = await obterEmpresaPorCNPJ(cnpj);
+        const funcionarioId = await obterFuncionarioPorNomeOuCPF(empresaId, nomeOuCPF);
+        const detalhesFuncionario = await obterDetalhesFuncionario(funcionarioId);
+        const { salarioBase, admissao, nome } = detalhesFuncionario;
+
+        const dataAdmissao = new Date(admissao);
+        const dataSaida = new Date(dataDemissao);
+        const tempoEmpresaMeses = calcularTempoEmpresaMeses(dataAdmissao, dataSaida);
+
+        if (dataSaida < dataAdmissao) {
+            throw new Error('Data de demissão não pode ser anterior à admissão.');
+        }
+
+        let avisoPrevio = 0, multaFgts = 0, saldoSalario = 0, feriasVencidas = 0, feriasProporcionais = 0, decimoTerceiro = 0, fgts = 0;
+
+        saldoSalario = calcularSaldoSalario(salarioBase, dataSaida);
+
+        if (tipoRescisao === 'demissaoSemJustaCausa') {
+            avisoPrevio = calcularAvisoPrevio(salarioBase, tempoEmpresaMeses);
+            feriasProporcionais = calcularFeriasProporcionais(salarioBase, dataAdmissao, dataSaida);
+            feriasVencidas = calcularFeriasVencidas(salarioBase, dataAdmissao, dataSaida);
+            decimoTerceiro = calcularDecimoTerceiro(salarioBase, dataSaida);
+            multaFgts = salarioBase * 0.4;
+            fgts = salarioBase * 0.08 * tempoEmpresaMeses;
+
+        } else if (tipoRescisao === 'pedidoDemissao') {
+            feriasProporcionais = calcularFeriasProporcionais(salarioBase, dataAdmissao, dataSaida);
+            feriasVencidas = calcularFeriasVencidas(salarioBase, dataAdmissao, dataSaida);
+            decimoTerceiro = calcularDecimoTerceiro(salarioBase, dataSaida);
+
+        } else if (tipoRescisao === 'demissaoPorJustaCausa') {
+            feriasVencidas = calcularFeriasVencidas(salarioBase, dataAdmissao, dataSaida);
+        } else {
+            throw new Error('Tipo de rescisão inválido.');
+        }
+
+        return {
+            funcionario: nome,
+            tipoRescisao,
+            salarioBase,
+            saldoSalario: saldoSalario.toFixed(2),
+            avisoPrevio: avisoPrevio.toFixed(2),
+            feriasVencidas: feriasVencidas.toFixed(2),
+            feriasProporcionais: feriasProporcionais.toFixed(2),
+            decimoTerceiro: decimoTerceiro.toFixed(2),
+            multaFgts: multaFgts.toFixed(2),
+            fgts: fgts.toFixed(2),
+            totalBruto: (saldoSalario + avisoPrevio + feriasVencidas + feriasProporcionais + decimoTerceiro + multaFgts).toFixed(2)
+        };
+    } catch (error) {
+        console.error('❌ Erro na simulação de rescisão:', error.message);
+        throw new Error(error.message);
+    }
+};
+
+const calcularTempoEmpresaMeses = (dataAdmissao, dataSaida) => {
+    return (dataSaida.getFullYear() - dataAdmissao.getFullYear()) * 12 + (dataSaida.getMonth() - dataAdmissao.getMonth());
+};
+
+const calcularSaldoSalario = (salarioBase, dataSaida) => {
+    const diasTrabalhados = dataSaida.getDate();
+    return (salarioBase / 30) * diasTrabalhados;
+};
+
+const calcularAvisoPrevio = (salarioBase, tempoEmpresaMeses) => {
+    const avisoPrevioDias = tempoEmpresaMeses >= 12 ? 30 : 0;
+    return (salarioBase / 30) * avisoPrevioDias;
+};
+
+const calcularFeriasVencidas = (salarioBase, dataAdmissao, dataSaida) => {
+    return (dataSaida - dataAdmissao) >= 365 * 24 * 60 * 60 * 1000 ? salarioBase + salarioBase / 3 : 0;
+};
+
+const calcularFeriasProporcionais = (salarioBase, dataAdmissao, dataSaida) => {
+    const mesesTrabalhados = calcularTempoEmpresaMeses(dataAdmissao, dataSaida) % 12;
+    return ((salarioBase / 12) * mesesTrabalhados) + ((salarioBase / 12) * mesesTrabalhados) / 3;
+};
+
+const calcularDecimoTerceiro = (salarioBase, dataSaida) => {
+    const mesesTrabalhados = calcularTempoEmpresaMeses(new Date(dataSaida.getFullYear(), 0, 1), dataSaida);
+    return (salarioBase / 12) * mesesTrabalhados;
+};
+
+
 // 🟢 Buscar TODAS as empresas (de ambas as contas)
 const fetchEmpresas = async () => {
     try {
@@ -452,6 +540,8 @@ const buscarDocumentoEspecifico = async (termoEmpresa, tipoDocumento, mes) => {
     }
 };
 
+
+
 module.exports = {
     obterTodasEmpresas,
     obterEmpresaPorCNPJ,
@@ -459,6 +549,7 @@ module.exports = {
     obterDetalhesFuncionario,
     simularFerias,
     fetchEmpresas,
+    simularRescisao,
     buscarEmpresaPorNomeOuCNPJ,
     buscarDocumentoEspecifico
 };
