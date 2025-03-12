@@ -108,7 +108,8 @@ const handleBuscarDocumento = async (req, res) => {
         console.log(`📄 Solicitando documento: Empresa: ${empresa}, Tipo: ${tipoDocumento}, Mês: ${mes || "qualquer mês"}`);
 
         const resultado = await buscarDocumentoEspecifico(empresa, tipoDocumento, mes);
-        res.json(resultado);
+resultado.telefone = req.body.telefone; // Adiciona telefone no JSON de resposta
+res.json(resultado);
 
         // 🔥 Enviar resultado para o Webhook
         if (WEBHOOK_URL) {
