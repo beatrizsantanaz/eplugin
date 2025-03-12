@@ -120,7 +120,7 @@ const handleBuscarDocumento = async (req, res) => {
             console.log(`🚀 Enviando webhook para: ${WEBHOOK_URL}`);
             console.log(`📡 Payload do webhook:`, JSON.stringify(payloadWebhook));
 
-            axios.post(WEBHOOK_URL, payloadWebhook, { timeout: 5000 }) // 5 segundos
+            axios.post(WEBHOOK_URL, payloadWebhook, { timeout: 10000 }) // 5 segundos
                 .then(() => console.log("✅ Webhook enviado com sucesso."))
                 .catch(err => console.error("❌ Erro ao enviar webhook:", err.response ? err.response.data : err.message));
         }
